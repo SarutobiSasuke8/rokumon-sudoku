@@ -1,0 +1,52 @@
+{
+  "$schema": "https://example.invalid/browser-game-asset-manifest.schema.json",
+  "version": 1,
+  "assets": [
+    {
+      "key": "listing-cover-master",
+      "type": "image-source",
+      "path": "assets/listing/cover.png",
+      "runtimePath": "assets/listing/cover.png",
+      "role": "source-master",
+      "dimensions": "1536x1024",
+      "source": "OpenAI built-in image generation",
+      "generated": "2026-09-04",
+      "license": "project-owned generated artwork",
+      "validated": true
+    },
+    {
+      "key": "listing-cover",
+      "type": "image",
+      "path": "assets/listing/cover.jpg",
+      "runtimePath": "assets/listing/cover.jpg",
+      "role": "Rokumon Games catalogue cover",
+      "dimensions": "1536x1024",
+      "derivedFrom": "listing-cover-master",
+      "license": "project-owned generated artwork",
+      "validated": true
+    },
+    {
+      "key": "listing-hero-master",
+      "type": "image-source",
+      "path": "assets/listing/hero.png",
+      "runtimePath": "assets/listing/hero.png",
+      "role": "source-master",
+      "dimensions": "1672x941",
+      "source": "OpenAI built-in image generation and iterative editing",
+      "generated": "2026-09-04",
+      "license": "project-owned generated artwork",
+      "validated": true
+    },
+    {
+      "key": "listing-hero",
+      "type": "image",
+      "path": "assets/listing/hero.jpg",
+      "runtimePath": "assets/listing/hero.jpg",
+      "role": "Rokumon Games detail hero",
+      "dimensions": "1600x900",
+      "derivedFrom": "listing-hero-master",
+      "license": "project-owned generated artwork",
+      "validated": true
+    }
+  ]
+}
