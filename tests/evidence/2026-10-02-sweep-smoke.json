@@ -1,0 +1,11 @@
+{
+  "mode": "sudoku",
+  "checks": [
+    "Corrupt progress boots into a playable board",
+    "375x812 layout without horizontal overflow",
+    "Arrow and hint shortcuts preserve the open puzzle dialog",
+    "16 keyboard hints complete a puzzle despite blocked storage",
+    "Replay restores a fresh puzzle"
+  ],
+  "errors": []
+}

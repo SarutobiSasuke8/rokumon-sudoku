@@ -213,6 +213,7 @@ export class SudokuApp {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
+    if (this.root.querySelector("dialog[open]")) return;
     if (event.key >= "1" && event.key <= "9") {
       const value = Number(event.key);
       if (value <= this.session.generated.variant.size) this.enter(value);
