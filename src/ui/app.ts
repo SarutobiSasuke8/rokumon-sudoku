@@ -1,32 +1,10 @@
 import { hub } from "../integrations/hub.js";
-import { CAMPAIGN, DIFFICULTIES, MODES, VARIANTS, type CampaignNode } from "../game/presets";
-import { calculateReward, cellSharesGroup, createPuzzle, formatTime } from "../game/sudoku";
+import { CAMPAIGN, DIFFICULTIES, MODES, VARIANTS } from "../game/presets";
+import { calculateReward, cellSharesGroup, formatTime } from "../game/sudoku";
 import { loadProgress, rankFor, saveProgress, setTheme } from "../game/store";
-import type { Difficulty, GameMode, GeneratedPuzzle, PlayerProgress, ThemeId, VariantId } from "../game/types";
-
-interface Move {
-  index: number;
-  entry: number;
-  notes: number[];
-}
-
-interface Session {
-  generated: GeneratedPuzzle;
-  entries: number[];
-  notes: Set<number>[];
-  selected: number;
-  noteMode: boolean;
-  mistakes: number;
-  hints: number;
-  history: Move[];
-  elapsed: number;
-  mode: GameMode;
-  campaignIndex?: number;
-  rewardBase: number;
-  status: "playing" | "complete" | "failed";
-  errorIndex?: number;
-  reward?: number;
-}
+import { createSession, type Session } from "../game/session";
+import { encodeActiveState, loadActiveState, saveActiveState } from "../game/sessionStore";
+import type { Difficulty, GameMode, PlayerProgress, ThemeId, VariantId } from "../game/types";
 
 const THEME_OPTIONS: { id: ThemeId; label: string }[] = [
   { id: "parchment", label: "Parchment" },
@@ -50,40 +28,46 @@ export class SudokuApp {
   private session!: Session;
   private timer?: number;
   private completionShown = false;
+  private lastSaved = "";
+  private restoreNotice?: string;
+  private storageNotice?: string;
 
   constructor(private readonly root: HTMLElement) {}
 
   mount(): void {
+    const restored = loadActiveState(this.progress);
+    this.restoreNotice = restored.notice;
+    if (restored.state) {
+      this.session = restored.state.session;
+      this.progress = restored.state.progress;
+    }
     setTheme(this.progress.theme);
-    this.startCampaign(Math.min(this.progress.campaignUnlocked, CAMPAIGN.length - 1));
+    if (this.session) this.render();
+    else this.startCampaign(Math.min(this.progress.campaignUnlocked, CAMPAIGN.length - 1));
     this.timer = window.setInterval(() => this.tick(), 1000);
     window.addEventListener("keydown", (event) => this.onKeyDown(event));
+    window.addEventListener("pagehide", () => this.persistSession());
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) this.persistSession();
+    });
     hub.ready();
   }
 
-  private createSession(variant: VariantId, difficulty: Difficulty, mode: GameMode, seed: string, campaignIndex?: number): Session {
-    const generated = createPuzzle(VARIANTS[variant], difficulty, seed);
-    return {
-      generated,
-      entries: [...generated.puzzle],
-      notes: Array.from({ length: generated.puzzle.length }, () => new Set<number>()),
-      selected: generated.puzzle.findIndex((value) => value === 0),
-      noteMode: false,
-      mistakes: 0,
-      hints: 0,
-      history: [],
-      elapsed: 0,
-      mode,
-      campaignIndex,
-      rewardBase: campaignIndex === undefined ? 300 : CAMPAIGN[campaignIndex].reward,
-      status: "playing",
-    };
+  private persistSession(): boolean {
+    const raw = encodeActiveState(this.session, this.progress);
+    if (raw === this.lastSaved) return true;
+    const saved = saveActiveState(this.session, this.progress);
+    if (saved) {
+      this.lastSaved = raw;
+      this.storageNotice = undefined;
+    } else this.storageNotice = "This browser could not save your puzzle. You can keep playing.";
+    return saved;
   }
 
   private startCampaign(index: number): void {
     const safeIndex = Math.max(0, Math.min(index, this.progress.campaignUnlocked, CAMPAIGN.length - 1));
     const node = CAMPAIGN[safeIndex];
-    this.session = this.createSession(node.variant, node.difficulty, "campaign", `campaign:${node.id}`, safeIndex);
+    this.session = createSession(node.variant, node.difficulty, "campaign", `campaign:${node.id}`, safeIndex);
     this.completionShown = false;
     this.render();
   }
@@ -92,13 +76,14 @@ export class SudokuApp {
     const seed = mode === "daily" ? `daily:${today()}` : `${mode}:${variant}:${difficulty}:${Date.now()}`;
     const chosenVariant = mode === "daily" ? "diagonal" : variant;
     const chosenDifficulty = mode === "daily" ? "adept" : difficulty;
-    this.session = this.createSession(chosenVariant, chosenDifficulty, mode, seed);
+    this.session = createSession(chosenVariant, chosenDifficulty, mode, seed);
+    this.restoreNotice = undefined;
     this.completionShown = false;
     this.render();
   }
 
   private tick(): void {
-    if (!this.session || this.session.status !== "playing") return;
+    if (!this.session || this.session.status !== "playing" || document.hidden || this.root.querySelector("dialog[open]")) return;
     this.session.elapsed += 1;
     if (this.session.mode === "sprint" && this.session.elapsed >= 300) {
       this.session.status = "failed";
@@ -107,6 +92,7 @@ export class SudokuApp {
     }
     const timer = this.root.querySelector<HTMLElement>("[data-timer]");
     if (timer) timer.textContent = this.displayTime();
+    if (this.session.elapsed % 5 === 0) this.persistSession();
   }
 
   private displayTime(): string {
@@ -120,6 +106,7 @@ export class SudokuApp {
   private enter(value: number): void {
     const { selected, generated } = this.session;
     if (selected < 0 || generated.puzzle[selected] !== 0 || this.session.status !== "playing") return;
+    if (this.session.noteMode && this.session.entries[selected] !== 0) return;
     this.remember(selected);
     if (this.session.noteMode) {
       if (this.session.notes[selected].has(value)) this.session.notes[selected].delete(value);
@@ -173,8 +160,9 @@ export class SudokuApp {
   }
 
   private undo(): void {
+    if (this.session.status !== "playing") return;
     const previous = this.session.history.pop();
-    if (!previous || this.session.status !== "playing") return;
+    if (!previous) return;
     this.session.entries[previous.index] = previous.entry;
     this.session.notes[previous.index] = new Set(previous.notes);
     this.session.selected = previous.index;
@@ -182,6 +170,7 @@ export class SudokuApp {
   }
 
   private complete(): void {
+    if (this.session.status !== "playing") return;
     this.session.status = "complete";
     const reward = this.session.mode === "zen" ? 0 : calculateReward(this.session.rewardBase, this.session.elapsed, this.session.mistakes, this.session.hints);
     this.session.reward = reward;
@@ -198,7 +187,10 @@ export class SudokuApp {
       if (!this.progress.completedNodes.includes(node.id)) this.progress.completedNodes.push(node.id);
       this.progress.campaignUnlocked = Math.min(CAMPAIGN.length - 1, Math.max(this.progress.campaignUnlocked, this.session.campaignIndex + 1));
     }
-    saveProgress(this.progress);
+    // The terminal board and its earned progress are one localStorage write.
+    // Keep the legacy mirror behind that checkpoint, so a failed active write
+    // cannot leave an older playable board alongside newly awarded points.
+    if (this.persistSession()) saveProgress(this.progress);
     hub.score(this.progress.points);
     hub.gameOver(reward, this.session.elapsed * 1000);
     hub.event("puzzle-completed", {
@@ -239,6 +231,7 @@ export class SudokuApp {
 
   private nodeName(): string {
     if (this.session.campaignIndex !== undefined) return CAMPAIGN[this.session.campaignIndex].title;
+    if (this.session.mode === "daily") return `Daily Trial · ${this.session.generated.seed.slice(6)}`;
     return MODES.find((mode) => mode.id === this.session.mode)?.label ?? "Puzzle";
   }
 
@@ -278,6 +271,7 @@ export class SudokuApp {
   }
 
   private render(): void {
+    this.persistSession();
     const rank = rankFor(this.progress.points);
     const progressToNext = rank.next === this.progress.points ? 100 : Math.min(100, Math.round((this.progress.points / rank.next) * 100));
     const size = this.session.generated.variant.size;
@@ -308,6 +302,7 @@ export class SudokuApp {
               ${this.boardMarkup()}
             </div>
             <p class="rule-note">${this.session.generated.variant.description}</p>
+            ${this.restoreNotice || this.storageNotice ? `<p class="rule-note" role="status">${this.storageNotice ?? this.restoreNotice}</p>` : ""}
           </div>
           <div class="number-pad" aria-label="Number input">
             ${Array.from({ length: size }, (_, index) => `<button data-number="${index + 1}" aria-label="Place ${index + 1}">${index + 1}</button>`).join("")}
@@ -392,7 +387,7 @@ export class SudokuApp {
     this.root.querySelectorAll<HTMLElement>("[data-theme-choice]").forEach((button) => button.addEventListener("click", () => {
       this.progress.theme = button.dataset.themeChoice as ThemeId;
       setTheme(this.progress.theme);
-      saveProgress(this.progress);
+      if (this.persistSession()) saveProgress(this.progress);
       this.render();
     }));
     this.root.querySelector<HTMLElement>("[data-next-campaign]")?.addEventListener("click", () => this.startCampaign((this.session.campaignIndex ?? 0) + 1));

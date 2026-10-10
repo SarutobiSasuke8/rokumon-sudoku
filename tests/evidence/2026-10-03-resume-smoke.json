@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-03",
+  "checks": [
+    "Refresh retains an actual player hint",
+    "Refresh preserves notes, undo stack, selection, note mode, elapsed time, mistakes and hint count",
+    "Restored undo removes the latest note and then restores the hinted cell's pencil marks",
+    "Open dialogs pause the timer and retain keyboard focus",
+    "Note mode on a filled cell does not add hidden notes or undo records",
+    "375x812 emulated touch layout fits and button-entered progress survives refresh",
+    "Actual completion restores board, points, solved count and campaign unlock even if the legacy mirror write fails",
+    "Repeated completed reload, Hint and Undo do not change rewards or terminal undo history",
+    "Truncated JSON and truncated clue arrays recover visibly without losing legacy progression",
+    "An older Daily resumes its dated seed; choosing Daily starts today's UTC trial",
+    "A Sprint resumes its remaining active seconds and stays failed after timeout and refresh",
+    "Visibility-hidden lifecycle branch pauses active play time",
+    "Quota-blocked saves show a clear notice while allowing completion; failed checkpoints do not advance persisted awards"
+  ],
+  "errors": []
+}
