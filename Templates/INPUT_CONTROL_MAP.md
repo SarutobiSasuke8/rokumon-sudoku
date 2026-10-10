@@ -25,3 +25,6 @@ The single source of truth for how the game is controlled. Update this before or
 
 - Input model (polled / event-driven / hybrid): `Event-driven DOM controls and keydown mapping.`
 - Dead zones, buffering, or coyote-time decisions: `Not applicable; one discrete action is processed per keydown or activation.`
+- Notes apply to empty editable cells. Digit input in note mode leaves filled cells unchanged.
+- Undo and Hint leave completed or failed trials unchanged; Replay starts a fresh attempt.
+- Open dialogs leave game shortcuts alone and pause active play time. The saved puzzle and input selection resume automatically after refresh.
