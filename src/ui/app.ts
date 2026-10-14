@@ -87,6 +87,7 @@ export class SudokuApp {
     this.session.elapsed += 1;
     if (this.session.mode === "sprint" && this.session.elapsed >= 300) {
       this.session.status = "failed";
+      hub.gameOver(0, this.session.elapsed * 1000);
       this.render();
       return;
     }

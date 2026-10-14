@@ -38,3 +38,11 @@ npm run verify
 - Lossless source masters: matching PNG files in `assets/listing/`
 - Generation provenance and prompts: `assets/CREDITS.md`
 - Hub intake draft: `game-hub-manifest.json`
+
+## Rokumon hub events
+
+The optional `/hub-bridge.js` SDK supplies `window.Hub`. The puzzle reports ready, total progression score, and run completion (including sprint expiry). Missing or broken SDK calls are safe no-ops and never change gameplay.
+
+- `puzzle-completed`: `variant` (string), `difficulty` (string), `mode` (string), `reward` (number), `seconds` (number).
+
+Run `npm test` for SDK forwarding/absence regression coverage. The static build uses relative asset URLs and remains playable standalone.
