@@ -26,6 +26,17 @@ try {
   for (const sdk of [true, false]) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const page = await context.newPage();
+    await page.addInitScript(() => {
+      const original = window.setInterval.bind(window);
+      window.__sudokuTicks = [];
+      window.setInterval = (callback, delay, ...args) => {
+        if (delay === 1000 && typeof callback === "function") {
+          window.__sudokuTicks.push(() => callback(...args));
+          return 999999;
+        }
+        return original(callback, delay, ...args);
+      };
+    });
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.route("**/*", async route => {
@@ -52,7 +63,21 @@ try {
       const event = calls.find(call => call.name === "event");
       assert.equal(event.args[0], "puzzle-completed");
       assert.deepEqual(Object.keys(event.args[1]).sort(), ["difficulty", "mode", "reward", "seconds", "variant"]);
+      for (const key of ["difficulty", "mode", "variant"]) assert.equal(typeof event.args[1][key], "string");
+      for (const key of ["reward", "seconds"]) assert.equal(typeof event.args[1][key], "number");
     } else assert.equal(await page.evaluate(() => typeof window.Hub), "undefined");
+    await page.locator('[data-action="replay"]').click();
+    for (let count = 0; count < 81 && !(await page.locator("#result-dialog").isVisible()); count++) await page.keyboard.press("h");
+    assert.equal(await page.locator("#result-dialog").isVisible(), true);
+    if (sdk) assert.equal(await page.evaluate(() => window.hubCalls.filter(call => call.name === "gameOver").length), 2);
+    await page.locator('[data-action="replay"]').click();
+    await page.locator('[data-action="new"]').first().click();
+    await page.locator('label:has(input[name="mode"][value="sprint"])').click();
+    await page.locator('[data-action="start-custom"]').click();
+    await page.evaluate(() => { for (let n = 0; n < 301; n++) window.__sudokuTicks.forEach(tick => tick()); });
+    await page.locator("#result-dialog").waitFor({ state: "visible" });
+    assert.equal(await page.locator("#result-dialog").isVisible(), true, "sprint expiry ends the run");
+    if (sdk) assert.deepEqual(await page.evaluate(() => window.hubCalls.filter(call => call.name === "gameOver").at(-1).args), [0, 300000]);
     assert.deepEqual(errors, []);
     await context.close();
   }
