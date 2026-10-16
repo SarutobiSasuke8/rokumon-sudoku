@@ -5,6 +5,7 @@ venv/
 
 # Build outputs
 dist/
+dist-crazygames/
 build/
 .next/
 out/

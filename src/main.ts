@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import "./style.css";
 import { SudokuApp } from "./ui/app";
+import { createPortal, selectAdapter } from "./portal";
 
 class AmbientScene extends Phaser.Scene {
   private ink = 0x8f6f4a;
@@ -49,7 +50,28 @@ class AmbientScene extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({
+// Optional web-portal SDK (CrazyGames build only). Without it every call is a no-op.
+const portal = createPortal(selectAdapter(import.meta.env.MODE), {
+  pause() {
+    app.setAdBreak(true);
+    game.pause();
+    document.documentElement.dataset.adBreak = "paused";
+  },
+  mute() {
+    game.sound.mute = true;
+    document.documentElement.dataset.adBreak = "muted";
+  },
+  unmute() {
+    game.sound.mute = false;
+  },
+  resume() {
+    game.resume();
+    app.setAdBreak(false);
+    delete document.documentElement.dataset.adBreak;
+  },
+});
+
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "phaser-bg",
   width: window.innerWidth,
@@ -60,4 +82,10 @@ new Phaser.Game({
   scene: [AmbientScene],
 });
 
-new SudokuApp(document.querySelector<HTMLElement>("#app")!).mount();
+const app = new SudokuApp(document.querySelector<HTMLElement>("#app")!, portal);
+
+void portal.init().then(() => {
+  portal.loadingStart();
+  app.mount();
+  portal.loadingStop();
+});
