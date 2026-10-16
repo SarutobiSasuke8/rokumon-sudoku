@@ -4,6 +4,10 @@
 
 * { box-sizing: border-box; }
 html, body { min-height: 100%; margin: 0; overflow-x: clip; }
+/* No pull-to-refresh or scroll chaining mid-puzzle, and no double-tap zoom on
+   rapid taps across the board, keypad and tools. */
+html { overscroll-behavior-y: none; }
+button, .board { touch-action: manipulation; }
 body {
   background: var(--color-paper);
   color: var(--color-ink);
