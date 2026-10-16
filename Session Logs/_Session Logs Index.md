@@ -23,6 +23,7 @@ Small one-line fixes do not need a session log unless the user asks.
 
 ## Logs
 
+- [[2026-10-16 - CrazyGames portal adapter]]
 - [Active puzzle resume](2026-10-03-session-log-active-puzzle-resume.md)
 - [Save recovery sweep](2026-10-02-session-log-save-recovery.md)
 

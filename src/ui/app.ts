@@ -1,4 +1,5 @@
 import { hub } from "../integrations/hub.js";
+import { createPortal, type Portal } from "../portal";
 import { CAMPAIGN, DIFFICULTIES, MODES, VARIANTS } from "../game/presets";
 import { calculateReward, cellSharesGroup, formatTime } from "../game/sudoku";
 import { loadProgress, rankFor, saveProgress, setTheme } from "../game/store";
@@ -31,8 +32,27 @@ export class SudokuApp {
   private lastSaved = "";
   private restoreNotice?: string;
   private storageNotice?: string;
+  private adBreak = false;
+  private levelEnded = false;
 
-  constructor(private readonly root: HTMLElement) {}
+  constructor(
+    private readonly root: HTMLElement,
+    private readonly portal: Portal = createPortal(null, { pause() {}, mute() {}, unmute() {}, resume() {} }),
+  ) {}
+
+  /** Portal ad break: freeze the timer and block pointer and keyboard input. */
+  setAdBreak(active: boolean): void {
+    this.adBreak = active;
+    this.root.inert = active;
+    this.root.setAttribute("aria-busy", String(active));
+    this.syncGameplay();
+  }
+
+  private syncGameplay(): void {
+    const playing = !this.adBreak && this.session?.status === "playing" && !this.root.querySelector("dialog[open]");
+    if (playing) this.portal.gameplayStart();
+    else this.portal.gameplayStop();
+  }
 
   mount(): void {
     const restored = loadActiveState(this.progress);
@@ -46,6 +66,15 @@ export class SudokuApp {
     else this.startCampaign(Math.min(this.progress.campaignUnlocked, CAMPAIGN.length - 1));
     this.timer = window.setInterval(() => this.tick(), 1000);
     window.addEventListener("keydown", (event) => this.onKeyDown(event));
+    // `inert` does not reach an open modal dialog (top layer), so swallow
+    // input in the capture phase while a portal ad break is active.
+    for (const type of ["click", "pointerdown", "keydown", "submit", "cancel"]) {
+      this.root.addEventListener(type, (event) => {
+        if (!this.adBreak) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+    }
     window.addEventListener("pagehide", () => this.persistSession());
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.persistSession();
@@ -83,10 +112,11 @@ export class SudokuApp {
   }
 
   private tick(): void {
-    if (!this.session || this.session.status !== "playing" || document.hidden || this.root.querySelector("dialog[open]")) return;
+    if (!this.session || this.adBreak || this.session.status !== "playing" || document.hidden || this.root.querySelector("dialog[open]")) return;
     this.session.elapsed += 1;
     if (this.session.mode === "sprint" && this.session.elapsed >= 300) {
       this.session.status = "failed";
+      this.levelEnded = true;
       hub.gameOver(0, this.session.elapsed * 1000);
       this.render();
       return;
@@ -173,6 +203,7 @@ export class SudokuApp {
   private complete(): void {
     if (this.session.status !== "playing") return;
     this.session.status = "complete";
+    this.levelEnded = true;
     const reward = this.session.mode === "zen" ? 0 : calculateReward(this.session.rewardBase, this.session.elapsed, this.session.mistakes, this.session.hints);
     this.session.reward = reward;
     this.progress.points += reward;
@@ -206,7 +237,7 @@ export class SudokuApp {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
-    if (this.root.querySelector("dialog[open]")) return;
+    if (this.adBreak || this.root.querySelector("dialog[open]")) return;
     if (event.key >= "1" && event.key <= "9") {
       const value = Number(event.key);
       if (value <= this.session.generated.variant.size) this.enter(value);
@@ -334,8 +365,17 @@ export class SudokuApp {
     this.bindEvents();
     if (this.session.status !== "playing" && !this.completionShown) {
       this.completionShown = true;
-      window.setTimeout(() => this.root.querySelector<HTMLDialogElement>("#result-dialog")?.showModal(), 0);
+      window.setTimeout(() => {
+        this.root.querySelector<HTMLDialogElement>("#result-dialog")?.showModal();
+        this.syncGameplay();
+        // Natural break between puzzles. The portal enforces ad frequency.
+        if (this.levelEnded) {
+          this.levelEnded = false;
+          void this.portal.requestMidgameAd();
+        }
+      }, 0);
     }
+    this.syncGameplay();
   }
 
   private dialogMarkup(): string {
@@ -368,8 +408,12 @@ export class SudokuApp {
       if (action === "new") {
         button.closest("dialog")?.close();
         this.root.querySelector<HTMLDialogElement>("#new-dialog")?.showModal();
+        this.syncGameplay();
       }
-      if (action === "themes") this.root.querySelector<HTMLDialogElement>("#theme-dialog")?.showModal();
+      if (action === "themes") {
+        this.root.querySelector<HTMLDialogElement>("#theme-dialog")?.showModal();
+        this.syncGameplay();
+      }
       if (action === "notes") { this.session.noteMode = !this.session.noteMode; this.render(); }
       if (action === "undo") this.undo();
       if (action === "erase") this.erase();
@@ -392,8 +436,11 @@ export class SudokuApp {
       this.render();
     }));
     this.root.querySelector<HTMLElement>("[data-next-campaign]")?.addEventListener("click", () => this.startCampaign((this.session.campaignIndex ?? 0) + 1));
-    this.root.querySelectorAll<HTMLDialogElement>("dialog").forEach((dialog) => dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) dialog.close();
-    }));
+    this.root.querySelectorAll<HTMLDialogElement>("dialog").forEach((dialog) => {
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+      dialog.addEventListener("close", () => this.syncGameplay());
+    });
   }
 }

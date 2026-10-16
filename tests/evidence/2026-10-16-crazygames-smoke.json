@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-16",
+  "sdkCalls": [
+    "init",
+    "loadingStart",
+    "loadingStop",
+    "gameplayStart",
+    "gameplayStop",
+    "requestAd:midgame",
+    "gameplayStart",
+    "gameplayStop",
+    "requestAd:midgame",
+    "gameplayStart"
+  ],
+  "initialDownloadBytes": 1426822,
+  "localTimeToGameplayMs": 456,
+  "files": 3,
+  "totalBytes": 1426822,
+  "externalOrigins": [
+    "fonts.googleapis.com",
+    "sdk.crazygames.com"
+  ],
+  "largest": [
+    {
+      "path": "assets/index-CZ3PCjnW.js",
+      "bytes": 1405838
+    },
+    {
+      "path": "assets/index-6S-9Jgk7.css",
+      "bytes": 20071
+    },
+    {
+      "path": "index.html",
+      "bytes": 913
+    }
+  ],
+  "limits": {
+    "initialMB": 50,
+    "mobileHomepageMB": 20,
+    "totalMB": 250,
+    "files": 1500
+  }
+}

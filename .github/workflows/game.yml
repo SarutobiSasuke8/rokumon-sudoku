@@ -18,3 +18,5 @@ jobs:
       - run: npm run verify
       - run: npx playwright install --with-deps chromium
       - run: npm run smoke:hub
+      - run: npm run build:crazygames
+      - run: npm run smoke:crazygames
