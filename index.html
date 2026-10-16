@@ -6,10 +6,15 @@
     <meta name="theme-color" content="#f1e7d0" />
     <meta name="description" content="A campaign-led Sudoku adventure from Rokumon Games." />
     <title>Rokumon Sudoku</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23b94b32'/%3E%3Cpath d='M12 12h40v40H12z M25.3 12v40 M38.7 12v40 M12 25.3h40 M12 38.7h40' fill='none' stroke='%23f1e7d0' stroke-width='4'/%3E%3C/svg%3E" />
+    <style>
+      /* Shown until the bundle mounts the app, which replaces #app's contents. */
+      .boot-loading { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: #f1e7d0; color: #3b2a1c; font: 600 1rem/1.4 "Segoe UI", sans-serif; letter-spacing: 0.08em; }
+    </style>
   </head>
   <body>
     <div id="phaser-bg" aria-hidden="true"></div>
-    <main id="app" aria-label="Rokumon Sudoku"></main>
+    <main id="app" aria-label="Rokumon Sudoku"><p class="boot-loading" role="status" aria-live="polite">Opening the gates…</p></main>
     <div id="announcer" class="visually-hidden" aria-live="polite"></div>
     <script src="/hub-bridge.js"></script>
     <script type="module" src="/src/main.ts"></script>
