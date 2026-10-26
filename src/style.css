@@ -152,8 +152,8 @@ button[data-state="success"] { border-color: var(--color-success); }
   padding: clamp(var(--space-xs), 2.4vw, var(--space-lg));
 }
 .board {
-  background: var(--color-rule-strong);
-  border: var(--rule-heavy) solid var(--color-rule-strong);
+  background: var(--color-rule);
+  border: 3px solid var(--color-ink);
   display: grid;
   gap: var(--rule-thin);
   grid-template-columns: repeat(var(--board-size), minmax(0, 1fr));
@@ -177,8 +177,11 @@ button[data-state="success"] { border-color: var(--color-success); }
   position: relative;
   transition: background-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
 }
-.cell.box-right { box-shadow: var(--rule-heavy) 0 0 var(--color-rule-strong); z-index: var(--z-base); }
-.cell.box-bottom::before { background: var(--color-rule-strong); content: ""; height: var(--rule-heavy); inset: auto 0 calc(var(--rule-heavy) * -1); position: absolute; }
+/* Keep region rules inside the cells so adjacent and selected cells cannot
+   paint over them. Both rules survive at a box's bottom-right corner. */
+.cell { box-shadow: inset calc(-1 * var(--region-right, 0px)) 0 0 var(--color-ink), inset 0 calc(-1 * var(--region-bottom, 0px)) 0 var(--color-ink); }
+.cell.box-right { --region-right: 3px; }
+.cell.box-bottom { --region-bottom: 3px; }
 .cell.is-peer { background: var(--color-paper-2); color: var(--color-ink); }
 .cell.is-matched { background: var(--color-paper-3); color: var(--color-ink); }
 .cell.is-selected { background: var(--color-accent); color: var(--color-accent-ink); z-index: var(--z-raised); }

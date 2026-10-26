@@ -63,7 +63,7 @@ export class SudokuApp {
     }
     setTheme(this.progress.theme);
     if (this.session) this.render();
-    else this.startCampaign(Math.min(this.progress.campaignUnlocked, CAMPAIGN.length - 1));
+    else this.startGame("classic", "wanderer", "quick");
     this.timer = window.setInterval(() => this.tick(), 1000);
     window.addEventListener("keydown", (event) => this.onKeyDown(event));
     // `inert` does not reach an open modal dialog (top layer), so swallow
