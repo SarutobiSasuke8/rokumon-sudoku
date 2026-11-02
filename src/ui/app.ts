@@ -1,3 +1,4 @@
+import { music } from "../music";
 import { hub } from "../integrations/hub.js";
 import { createPortal, type Portal } from "../portal";
 import { CAMPAIGN, DIFFICULTIES, MODES, VARIANTS } from "../game/presets";
@@ -43,6 +44,7 @@ export class SudokuApp {
   /** Portal ad break: freeze the timer and block pointer and keyboard input. */
   setAdBreak(active: boolean): void {
     this.adBreak = active;
+    music.setPaused(active);
     this.root.inert = active;
     this.root.setAttribute("aria-busy", String(active));
     this.syncGameplay();
@@ -79,6 +81,11 @@ export class SudokuApp {
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.persistSession();
     });
+    music.onChange = () => this.updateMusic();
+    const unlockMusic = () => { if (!this.adBreak) music.unlock(); };
+    window.addEventListener("pointerdown", unlockMusic);
+    window.addEventListener("keydown", unlockMusic);
+    this.updateMusic();
     hub.ready();
   }
 
@@ -317,6 +324,12 @@ export class SudokuApp {
         </nav>
         <button class="points-chip" data-action="themes" aria-label="Open themes"><span>${this.progress.points.toLocaleString()}</span><small>points · ${rank.title}</small></button>
       </header>
+      <section class="music-bar" aria-label="Background music">
+        <button type="button" data-music-toggle aria-pressed="${music.enabled}">Music ${music.enabled ? "on" : "off"}</button>
+        <button type="button" data-music-next>Next track</button>
+        <label>Volume <input data-music-volume aria-label="Music volume" type="range" min="0" max="100" value="${Math.round(music.volume * 100)}"></label>
+        <span data-music-status></span>
+      </section>
       <div class="game-shell reveal">
         <section class="play-space" aria-labelledby="puzzle-title">
           <div class="puzzle-heading">
@@ -394,7 +407,21 @@ export class SudokuApp {
     `;
   }
 
+  private updateMusic(): void {
+    const toggle = this.root.querySelector<HTMLButtonElement>("[data-music-toggle]");
+    if (toggle) {
+      toggle.textContent = music.enabled ? "Music on" : "Music off";
+      toggle.setAttribute("aria-pressed", String(music.enabled));
+    }
+    const status = this.root.querySelector<HTMLElement>("[data-music-status]");
+    if (status) status.textContent = `${music.title} · ${music.status === "Ready" ? "Starts when you play" : music.status}`;
+  }
+
   private bindEvents(): void {
+    this.updateMusic();
+    this.root.querySelector("[data-music-toggle]")?.addEventListener("click", () => { music.setEnabled(!music.enabled); music.unlock(); });
+    this.root.querySelector("[data-music-next]")?.addEventListener("click", () => { music.next(); music.unlock(); });
+    this.root.querySelector<HTMLInputElement>("[data-music-volume]")?.addEventListener("input", (event) => music.setVolume(Number((event.target as HTMLInputElement).value) / 100));
     this.root.querySelectorAll<HTMLElement>("[data-cell]").forEach((cell) => cell.addEventListener("click", () => {
       this.session.selected = Number(cell.dataset.cell);
       this.render();
