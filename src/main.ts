@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { music } from "./music";
 import "./style.css";
 import { SudokuApp } from "./ui/app";
 import { createPortal, selectAdapter } from "./portal";
@@ -59,6 +60,7 @@ const portal = createPortal(selectAdapter(import.meta.env.MODE), {
   },
   mute() {
     game.sound.mute = true;
+    music.setPaused(true);
     document.documentElement.dataset.adBreak = "muted";
   },
   unmute() {
