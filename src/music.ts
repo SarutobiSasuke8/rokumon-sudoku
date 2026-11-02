@@ -14,7 +14,7 @@ export class MusicPlaylist {
   constructor(private storageKey: string) {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null");
-      if (typeof saved?.enabled === "boolean") this.enabled = saved.enabled;
+      // Each visit starts with music on; mute applies to the current visit.
       if (typeof saved?.volume === "number" && Number.isFinite(saved.volume)) this.volume = Math.max(0, Math.min(1, saved.volume));
     } catch { /* Storage can be unavailable in private browsing. */ }
     document.addEventListener("visibilitychange", () => this.sync());
@@ -94,7 +94,7 @@ export class MusicPlaylist {
   }
 
   private save(): void {
-    try { localStorage.setItem(this.storageKey, JSON.stringify({ enabled: this.enabled, volume: this.volume })); }
+    try { localStorage.setItem(this.storageKey, JSON.stringify({ volume: this.volume })); }
     catch { /* Playback still works without persistence. */ }
   }
 }

@@ -65,14 +65,16 @@ describe("music playlist lifecycle", () => {
     expect(player.paused).toBe(true);
   });
 
-  it("restores bounded volume and disabled preference", () => {
+  it("restores bounded volume but starts a new visit with music on", () => {
     const music = new MusicPlaylist("test");
     music.setVolume(0.37);
     music.setEnabled(false);
+    store.set("test", JSON.stringify({ enabled: false, volume: 0.37 }));
     const restored = new MusicPlaylist("test");
     expect(restored.volume).toBe(0.37);
     restored.unlock();
-    expect(FakeAudio.instances).toHaveLength(0);
+    expect(restored.enabled).toBe(true);
+    expect(FakeAudio.instances).toHaveLength(1);
     restored.setVolume(3);
     expect(restored.volume).toBe(1);
     restored.setVolume(NaN);
